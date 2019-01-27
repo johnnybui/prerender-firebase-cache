@@ -82,7 +82,11 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
       // replace invalid character for firebase key and set loaded content to firebase
       const reqUrl = encodeURIComponent(req.prerender.url).replace(/\./g, '_');
       db.ref(reqUrl).set(
-        { content: req.prerender.content, cachedAt: new Date().toISOString() },
+        {
+          content: req.prerender.content,
+          cachedAt: new Date().toISOString(),
+          url: req.prerender.url
+        },
         err => {
           if (err) {
             console.error('Error setting firebase cache', err);
