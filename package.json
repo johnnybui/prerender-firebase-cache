@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/johnnybui/prerender-firebase-cache#readme",
   "dependencies": {
-    "firebase-admin": "^6.5.1"
+    "firebase-admin": "^6.5.1",
+    "time-elapsed": "0.0.0"
   }
 }

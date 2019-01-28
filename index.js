@@ -7,6 +7,8 @@
  */
 function firebaseCache(serviceAccount, databaseURL, cacheExp) {
   const admin = require('firebase-admin');
+  const TimeElapsed = require('time-elapsed');
+  const timer = new TimeElapsed();
   let db;
   let errorMsg = '';
 
@@ -41,9 +43,10 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
         return next();
       }
 
+      timer.start();
       // replace invalid character for firebase key
       const reqUrl = encodeURIComponent(req.prerender.url).replace(/\./g, '_');
-      db.ref(reqUrl).once(
+      db.ref(`cache/${reqUrl}`).once(
         'value',
         snapshot => {
           if (snapshot.exists()) {
@@ -60,6 +63,14 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
               reqUrl,
               snapshot.val().cachedAt
             );
+            // push crawl stats (history) to firebase
+            db.ref(`crawlStats`).push({
+              url: req.prerender.url,
+              requestedAt: new Date().toISOString(),
+              status: 200,
+              cacheHit: 'Hit',
+              responseTime: timer.timeElapsed()
+            });
             return res.send(200, snapshot.val().content);
           } else {
             console.log('Cache not found', reqUrl);
@@ -76,12 +87,22 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
     pageLoaded: (req, res, next) => {
       if (errorMsg !== '' || req.prerender.statusCode !== 200) {
         console.error(errorMsg);
+        if (errorMsg === '') {
+          // push crawl stats (history) to firebase
+          db.ref(`crawlStats`).push({
+            url: req.prerender.url,
+            requestedAt: new Date().toISOString(),
+            status: req.prerender.statusCode || 504,
+            cacheHit: 'Miss',
+            responseTime: timer.timeElapsed()
+          });
+        }
         return next();
       }
 
       // replace invalid character for firebase key and set loaded content to firebase
       const reqUrl = encodeURIComponent(req.prerender.url).replace(/\./g, '_');
-      db.ref(reqUrl).set(
+      db.ref(`cache/${reqUrl}`).set(
         {
           content: req.prerender.content,
           cachedAt: new Date().toISOString(),
@@ -95,6 +116,14 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
           }
         }
       );
+      // push crawl stats (history) to firebase
+      db.ref(`crawlStats`).push({
+        url: req.prerender.url,
+        requestedAt: new Date().toISOString(),
+        status: req.prerender.statusCode,
+        cacheHit: 'Miss',
+        responseTime: timer.timeElapsed()
+      });
       next();
     }
   };
