@@ -93,10 +93,9 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
           } else {
             console.log('Set new firebase cache', reqUrl);
           }
-
-          next();
         }
       );
+      next();
     }
   };
 }
