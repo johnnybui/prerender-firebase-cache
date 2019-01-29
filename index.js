@@ -40,6 +40,10 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
   // main plugin
   return {
     requestReceived: (req, res, next) => {
+      if (!req.prerender.url || req.prerender.url.length === 0) {
+        console.error('Invalid request url');
+        return next();
+      }
       if (errorMsg !== '' || req.method !== 'GET') {
         console.error(errorMsg);
         return next();
@@ -126,6 +130,7 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
         cacheHit: 'Miss',
         responseTime: timer.timeElapsed()
       });
+
       next();
     }
   };
