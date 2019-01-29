@@ -3,7 +3,7 @@
  * @author Johnny Bui
  * @param {string} serviceAccount Firebase service account JSON
  * @param {string} databaseURL Firebase database URL
- * @param {string} cacheExp Cache expiration in hour or day. Example 8h or 1d.
+ * @param {string} [cacheExp] Cache expiration in hour or day. Example 8h or 1d. Not set for never expire
  */
 function firebaseCache(serviceAccount, databaseURL, cacheExp) {
   const admin = require('firebase-admin');
@@ -25,7 +25,9 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
 
   // process cache expiration setting
   let cacheExpMS;
-  if (cacheExp.endsWith('d')) {
+  if (!cacheExp) {
+    cacheExpMS = -1;
+  } else if (cacheExp.endsWith('d')) {
     const days = parseInt(cacheExp);
     cacheExpMS = days * 24 * 60 * 60 * 1000;
   } else if (cacheExp.endsWith('h')) {
@@ -53,7 +55,7 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
             // if cache is expired, next. Else, serve content from firebase
             const cachedAtDate = new Date(snapshot.val().cachedAt);
             const difference = new Date() - cachedAtDate;
-            if (difference > cacheExpMS) {
+            if (cacheExpMS !== -1 && difference > cacheExpMS) {
               console.log('Cache is expired', reqUrl);
               return next();
             }
