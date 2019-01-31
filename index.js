@@ -40,6 +40,8 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
   // main plugin
   return {
     requestReceived: (req, res, next) => {
+      timer.start();
+
       if (!req.prerender.url || req.prerender.url.length === 0) {
         console.error('Invalid request url');
         return next();
@@ -49,7 +51,6 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
         return next();
       }
 
-      timer.start();
       // replace invalid character for firebase key
       const reqUrl = encodeURIComponent(req.prerender.url).replace(/\./g, '_');
       db.ref(`cache/${reqUrl}`).once(
@@ -75,7 +76,8 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
               requestedAt: new Date().toISOString(),
               status: 200,
               cacheHit: 'Hit',
-              responseTime: timer.timeElapsed()
+              responseTime: timer.timeElapsed(),
+              agent: req.get('User-Agent')
             });
             return res.send(200, snapshot.val().content);
           } else {
@@ -99,8 +101,9 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
             url: req.prerender.url,
             requestedAt: new Date().toISOString(),
             status: req.prerender.statusCode || 504,
-            cacheHit: 'Miss',
-            responseTime: timer.timeElapsed()
+            cacheHit: req.method === 'POST' ? 'Forced re-cache' : 'Miss',
+            responseTime: timer.timeElapsed(),
+            agent: req.get('User-Agent')
           });
         }
         return next();
@@ -127,8 +130,9 @@ function firebaseCache(serviceAccount, databaseURL, cacheExp) {
         url: req.prerender.url,
         requestedAt: new Date().toISOString(),
         status: req.prerender.statusCode,
-        cacheHit: 'Miss',
-        responseTime: timer.timeElapsed()
+        cacheHit: req.method === 'POST' ? 'Forced re-cache' : 'Miss',
+        responseTime: timer.timeElapsed(),
+        agent: req.get('User-Agent')
       });
 
       next();
